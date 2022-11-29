@@ -13,6 +13,7 @@ how to use the page table and disk interfaces.
 #include <cassert>
 #include <iostream>
 #include <string.h>
+#include <queue>
 
 using namespace std;
 
@@ -22,9 +23,15 @@ typedef void (*program_f)(char *data, int length);
 
 // Number of physical frames
 int nframes;
+int page_faults_count = 0;
+int disk_reads_count = 0;
+int disk_writes_count = 0;
 
 // Pointer to disk for access from handlers
 struct disk *disk = nullptr;
+
+//queue for fifo algorithm
+std:: queue<int> fifo_queue;
 
 
 // Simple handler for pages == frames
@@ -35,11 +42,8 @@ void page_fault_handler_example(struct page_table *pt, int page) {
 	cout << "Before ---------------------------" << endl;
 	page_table_print(pt);
 	cout << "----------------------------------" << endl;
-
-	// Map the page to the same frame number and set to read/write
-	// TODO - Disable exit and enable page table update for example
+	page_table_set_entry(pt, page, page, PROT_READ | PROT_WRITE);
 	exit(1);
-	//page_table_set_entry(pt, page, page, PROT_READ | PROT_WRITE);
 
 	// Print the page table contents
 	cout << "After ----------------------------" << endl;
@@ -48,60 +52,86 @@ void page_fault_handler_example(struct page_table *pt, int page) {
 }
 
 void page_fault_handler_rand(struct page_table *pt, int page) {
-	cout << "page fault on page #" << page << endl;
+	int frame, bits;
+  	page_table_get_entry(pt, page, &frame, &bits); 
+	if(!(bits & PROT_WRITE)){
 
-	// Print the page table contents
-	cout << "Before ---------------------------" << endl;
-	page_table_print(pt);
-	cout << "----------------------------------" << endl;
+	}
+	else{
+		page_faults_count ++;
 
-	// Map the page to the same frame number and set to read/write
-	// TODO - Disable exit and enable page table update for example
-	exit(1);
-	//page_table_set_entry(pt, page, page, PROT_READ | PROT_WRITE);
+		//evict the frame which is the first in the queue
+		// int evict_frame;
+		
 
-	// Print the page table contents
-	cout << "After ----------------------------" << endl;
-	page_table_print(pt);
-	cout << "----------------------------------" << endl;
+		//read data into memory and update page table
+		disk_read(disk, page, &page_table_get_physmem(pt)[frame * PAGE_SIZE]);
+  		page_table_set_entry(pt, page, frame, PROT_READ);
+  		disk_reads_count ++;
+	}
 }
 
+//check if the page resident in memory (HOW???)
+//if so update the page table
+//if not, increase page_fault_count
+// 	check if the physical memory is full
+//	if so apply corresponding replacement algorithm
+//	
+//read data and update the page table
+
+/*
+Handle page fault using fifo replacement algorithm
+@param pt
+@param page
+*/
 void page_fault_handler_fifo(struct page_table *pt, int page) {
-	cout << "page fault on page #" << page << endl;
+	int frame, bits;
+  	page_table_get_entry(pt, page, &frame, &bits); 
+	            
 
-	// Print the page table contents
-	cout << "Before ---------------------------" << endl;
-	page_table_print(pt);
-	cout << "----------------------------------" << endl;
+	if(!(bits & PROT_WRITE)){
+		//if the page is in memory
+		//set the page to write
+		page_table_set_entry(pt, page, frame, bits | PROT_WRITE);
+	}
+	else{
+		//if the page is not in memory, apply fifo replacement algorithm
+		page_faults_count ++;
 
-	// Map the page to the same frame number and set to read/write
-	// TODO - Disable exit and enable page table update for example
-	exit(1);
-	//page_table_set_entry(pt, page, page, PROT_READ | PROT_WRITE);
+		//evict the frame which is the first in the queue
+		// int evict_frame;
+		
 
-	// Print the page table contents
-	cout << "After ----------------------------" << endl;
-	page_table_print(pt);
-	cout << "----------------------------------" << endl;
+		//read data into memory and update page table
+		disk_read(disk, page, &page_table_get_physmem(pt)[frame * PAGE_SIZE]);
+  		page_table_set_entry(pt, page, frame, PROT_READ);
+  		disk_reads_count ++;
+
+	}
+
 }
+
+
 
 void page_fault_handler_lru(struct page_table *pt, int page) {
-	cout << "page fault on page #" << page << endl;
+	int frame, bits;
+  	page_table_get_entry(pt, page, &frame, &bits); 
 
-	// Print the page table contents
-	cout << "Before ---------------------------" << endl;
-	page_table_print(pt);
-	cout << "----------------------------------" << endl;
+	if(!(bits & PROT_WRITE)){
+		//if the page is in memory
+		//set the page to write
+		page_table_set_entry(pt, page, frame, bits | PROT_WRITE);
+	}
+	else{
+		page_faults_count ++;
 
-	// Map the page to the same frame number and set to read/write
-	// TODO - Disable exit and enable page table update for example
-	exit(1);
-	//page_table_set_entry(pt, page, page, PROT_READ | PROT_WRITE);
+		
 
-	// Print the page table contents
-	cout << "After ----------------------------" << endl;
-	page_table_print(pt);
-	cout << "----------------------------------" << endl;
+		//read data into memory and update page table
+		disk_read(disk, page, &page_table_get_physmem(pt)[frame * PAGE_SIZE]);
+  		page_table_set_entry(pt, page, frame, PROT_READ);
+  		disk_reads_count ++;
+	}
 }
 
 
@@ -174,8 +204,6 @@ int main(int argc, char *argv[]) {
 		cerr << "ERROR: Couldn't create page table: " << strerror(errno) << endl;
 		return 1;
 	}
-
-	page_table_set_entry(pt, npages, npages, PROT_READ | PROT_WRITE);
 
 	// Run the specified program
 	char *virtmem = page_table_get_virtmem(pt);
