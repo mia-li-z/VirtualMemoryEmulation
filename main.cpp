@@ -117,7 +117,7 @@ void page_fault_handler_fifo(struct page_table *pt, int page) {
 		//read data into memory and update page table
   		page_table_set_entry(pt, page, frame, PROT_READ);
 		disk_read(disk, page, &page_table_get_physmem(pt)[frame * PAGE_SIZE]);
-  		disk_reads ++;
+  		disk_reads++;
 		frame_queue.push(frame);
 
 	}
@@ -139,7 +139,7 @@ static int evict_frame_fifo(struct page_table *pt){
 	int npages = page_table_get_npages(pt);
 	for(i=0;i<npages;i++)  {
 		page_table_get_entry(pt, i, &tmp_frame, &tmp_bits);
-		if(tmp_frame == evict_frame){
+		if(tmp_frame == evict_frame && tmp_bits != 0){
 			break;
 		}
 	}
@@ -156,7 +156,7 @@ static int evict_frame_fifo(struct page_table *pt){
 	}
 
 	//update the page table
-	page_table_set_entry(pt, evict_page, 0, 0);
+	page_table_set_entry(pt, evict_page, 0, 0); //-1
 
 	//return frame
 	return evict_frame;
