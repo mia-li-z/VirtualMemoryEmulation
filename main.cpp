@@ -26,6 +26,7 @@ int nframes;
 int page_faults = 0;
 int disk_reads = 0;
 int disk_writes = 0;
+int algorithm_type;
 
 std::queue<int> frame_queue;
 
@@ -36,7 +37,8 @@ struct disk *disk = nullptr;
 std:: queue<int> fifo_queue;
 
 
-static int evict_frame_fifo(struct page_table *pt);
+static void page_fault_handler(struct page_table *pt, int nframes, int type);
+static int evict_frame_algo(struct page_table *pt, int nframes);
 
 
 // Simple handler for pages == frames
@@ -55,35 +57,14 @@ void page_fault_handler_example(struct page_table *pt, int page) {
 	page_table_print(pt);
 	cout << "----------------------------------" << endl;
 }
-
+/*
+Handle page fault using random replacement algorithm
+@param pt
+@param page
+*/
 void page_fault_handler_rand(struct page_table *pt, int page) {
-	int frame, bits;
-  	page_table_get_entry(pt, page, &frame, &bits); 
-	if(!(bits & PROT_WRITE)){
-
-	}
-	else{
-		page_faults ++;
-
-		//evict the frame which is the first in the queue
-		// int evict_frame;
-		
-
-		//read data into memory and update page table
-		disk_read(disk, page, &page_table_get_physmem(pt)[frame * PAGE_SIZE]);
-  		page_table_set_entry(pt, page, frame, PROT_READ);
-  		disk_reads ++;
-	}
+	page_fault_handler(pt, page, 1);
 }
-
-//check if the page resident in memory (HOW???)
-//if so update the page table
-//if not, increase page_fault_count
-// 	check if the physical memory is full
-//	if so apply corresponding replacement algorithm
-//	
-//read data and update the page table
-
 
 /*
 Handle page fault using fifo replacement algorithm
@@ -91,6 +72,20 @@ Handle page fault using fifo replacement algorithm
 @param page
 */
 void page_fault_handler_fifo(struct page_table *pt, int page) {
+	page_fault_handler(pt, page, 2);
+}
+
+/*
+Handle page fault using lru replacement algorithm
+@param pt
+@param page
+*/
+void page_fault_handler_lru(struct page_table *pt, int page) {
+	page_fault_handler(pt,page,3);
+}
+
+
+static void page_fault_handler(struct page_table *pt, int page, int type) {
 	int frame, bits;
   	page_table_get_entry(pt, page, &frame, &bits); 
 
@@ -108,7 +103,8 @@ void page_fault_handler_fifo(struct page_table *pt, int page) {
 		page_faults ++;
 
 		if (disk_reads >= nframes) { // there are no free frames, apply fifo replacement algorithm
-			frame = evict_frame_fifo(pt);
+			algorithm_type = type;
+			frame = evict_frame_algo(pt, nframes);
   		}
 		else{ //there are free frames,;
 			frame = disk_reads;
@@ -129,12 +125,25 @@ void page_fault_handler_fifo(struct page_table *pt, int page) {
 
 }
 
-static int evict_frame_fifo(struct page_table *pt){
-	//get the frame to be evicted
-	int evict_frame = frame_queue.front();
-	frame_queue.pop();
+// algorithm to find the page that needs to be evicted
+static int evict_frame_algo(struct page_table *pt, int nframes){
+	//get the frame to be evicted based on types
+	//type 1 represents rand
+	//type 2 represents fifo
+	//type 3 represents lru
+	int evict_frame;
+	if(algorithm_type == 1){
+		evict_frame = rand()% nframes;
+	}
+	else if(algorithm_type == 2){
+		evict_frame = frame_queue.front();
+		frame_queue.pop();
+	}
+	else if(algorithm_type == 3){
 
-	//find page for that frame
+	}	
+	
+	//find page for that frame in page table
 	int i, tmp_frame, tmp_bits, evict_page, evict_bits;
 	int npages = page_table_get_npages(pt);
 	for(i=0;i<npages;i++)  {
@@ -148,7 +157,7 @@ static int evict_frame_fifo(struct page_table *pt){
 	evict_bits = tmp_bits;
 
 	cout << "evict_page = " << evict_page << endl;
-
+	
 	//if the page is dirty, write it to disk
 	if(evict_bits & PROT_WRITE){
 		disk_write(disk, evict_page, &page_table_get_physmem(pt)[evict_frame*PAGE_SIZE]);
@@ -162,31 +171,6 @@ static int evict_frame_fifo(struct page_table *pt){
 	return evict_frame;
 }
 
-
-
-void page_fault_handler_lru(struct page_table *pt, int page) {
-	int frame, bits;
-  	page_table_get_entry(pt, page, &frame, &bits); 
-
-	if(!(bits & PROT_WRITE)){
-		//if the page is in memory
-		//set the page to write
-		page_table_set_entry(pt, page, frame, bits | PROT_WRITE);
-	}
-	else{
-		page_faults ++;
-
-		
-
-		//read data into memory and update page table
-		disk_read(disk, page, &page_table_get_physmem(pt)[frame * PAGE_SIZE]);
-  		page_table_set_entry(pt, page, frame, PROT_READ);
-  		disk_reads ++;
-	}
-}
-
-
-// TODO - Handler(s) and page eviction algorithms
 
 int main(int argc, char *argv[]) {
 	// Check argument count
