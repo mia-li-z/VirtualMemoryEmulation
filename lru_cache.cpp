@@ -37,8 +37,8 @@ pair<int, int> LRUCache::evict(){
 
     pair<int, int> victim;
     victim = cache.back(); // the page to be evicted
-    cout << "the victim page=" << cache.back().first << 
-    ", frame="<<cache.back().second << endl; 
+    // cout << "the victim page=" << cache.back().first << 
+    // ", frame="<<cache.back().second << endl; 
     map.erase(cache.back().first);
     cache.pop_back();
 
