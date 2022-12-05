@@ -89,10 +89,10 @@ static void page_fault_handler(struct page_table *pt, int page, int type) {
 	int frame, bits;
   	page_table_get_entry(pt, page, &frame, &bits); 
 
-	// Print the page table contents
-	cout << "Before ---------------------------" << endl;
-	page_table_print(pt);
-	cout << "----------------------------------" << endl;
+	// // Print the page table contents
+	// cout << "Before ---------------------------" << endl;
+	// page_table_print(pt);
+	// cout << "----------------------------------" << endl;
 
 	if((bits == PROT_READ)){
 		//if the page residents in memory
@@ -118,10 +118,10 @@ static void page_fault_handler(struct page_table *pt, int page, int type) {
 
 	}
 	
-	// Print the page table contents
-	cout << "After ----------------------------" << endl;
-	page_table_print(pt);
-	cout << "----------------------------------" << endl;
+	// // Print the page table contents
+	// cout << "After ----------------------------" << endl;
+	// page_table_print(pt);
+	// cout << "----------------------------------" << endl;
 
 }
 
@@ -156,7 +156,7 @@ static int evict_frame_algo(struct page_table *pt, int nframes){
 	evict_page = i;
 	evict_bits = tmp_bits;
 
-	cout << "evict_page = " << evict_page << endl;
+	// cout << "evict_page = " << evict_page << endl;
 	
 	//if the page is dirty, write it to disk
 	if(evict_bits & PROT_WRITE){
