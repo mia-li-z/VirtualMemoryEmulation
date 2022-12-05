@@ -1,0 +1,4 @@
+Pages,Frames,Page Faults,Disk Reads,Disk Writes
+100,2,2504,2504,1006
+100,3,1838,1838,890
+100,4,1548,1548,809
