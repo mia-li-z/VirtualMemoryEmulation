@@ -8,6 +8,7 @@ Make all of your changes to main.cpp instead.
 #include <iostream>
 #include <cassert>
 
+
 using std::cout;
 using std::endl;
 
@@ -131,3 +132,4 @@ void scan_program( char *cdata, int length )
 		cout << "Scan Failed: Result = " << total << ", Expected = " << total_verify << endl;
 	}
 }
+

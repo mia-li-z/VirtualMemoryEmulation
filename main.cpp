@@ -5,7 +5,7 @@ You may add or rearrange any code or data as you need.
 The header files page_table.h and disk.h explain
 how to use the page table and disk interfaces.
 */
-#include "lru_cache.h"
+#include "custom_cache.h"
 #include "page_table.h"
 #include "disk.h"
 #include "program.h"
@@ -24,7 +24,7 @@ typedef void (*program_f)(char *data, int length);
 
 // Number of physical frames
 int nframes;
-int page_faults = 0;
+int page_faults;
 int disk_reads = 0;
 int disk_writes = 0;
 int algorithm_type;
@@ -36,7 +36,7 @@ std::queue<int> frame_queue;
 struct disk *disk = nullptr;
 
 // LRUCahe
-LRUCache *cache = nullptr;
+CustomCache *cache = nullptr;
 
 
 static void page_fault_handler(struct page_table *pt, int nframes, int type);
@@ -85,7 +85,8 @@ Handle page fault using lru replacement algorithm
 */
 void page_fault_handler_lru(struct page_table *pt, int page) {
 	// page_fault_handler(pt,page,3);
-	int frame, bits;
+
+	int frame, bits, evict_frame;
   	page_table_get_entry(pt, page, &frame, &bits); 
 
 	if((bits == PROT_READ)){
@@ -95,33 +96,37 @@ void page_fault_handler_lru(struct page_table *pt, int page) {
 	}
 	else{
 		//if the page does not resident in memory
-		page_faults ++;
+		page_faults++;
 
 		if (disk_reads >= nframes) { // there are no free frames, apply lru replacement algorithm
+			assert(cache->put(page, disk_reads)==false);
 			pair<int, int> victim = evict_lru(pt, nframes);
-			frame = victim.second;
+			evict_frame = victim.second;
   		}
 		else{ //there are free frames,;
-			frame = disk_reads;
+			evict_frame = disk_reads;
 		}
+
 		//read data into memory and update page table
-  		page_table_set_entry(pt, page, frame, PROT_READ);
-		disk_read(disk, page, &page_table_get_physmem(pt)[frame * PAGE_SIZE]);
+  		page_table_set_entry(pt, page, evict_frame, PROT_READ);
+		disk_read(disk, page, &page_table_get_physmem(pt)[evict_frame * PAGE_SIZE]);
   		disk_reads++;
-		cache->put(page, frame);
+		cache->put(page, evict_frame);
 	}
 }
+
 static pair<int, int> evict_lru(struct page_table *pt, int nframes){
-	pair<int, int> victim = cache->evict();
+	// get victim pair <page, value>
+	pair<int, int> victim = cache->evict(); 
 	int evict_page = victim.first;
 	int evict_frame = victim.second;
-	int tmp_frame, tmp_bits, evict_bits;
+
+	int tmp_frame, tmp_bits;
 	page_table_get_entry(pt, evict_page, &tmp_frame, &tmp_bits);
 	assert(tmp_frame==evict_frame);
-	evict_bits = tmp_bits;
 
 	//if the page is dirty, write it to disk
-	if(evict_bits & PROT_WRITE){
+	if(tmp_bits & PROT_WRITE){
 		disk_write(disk, evict_page, &page_table_get_physmem(pt)[evict_frame*PAGE_SIZE]);
 		disk_writes++;
 	}
@@ -149,7 +154,7 @@ static void page_fault_handler(struct page_table *pt, int page, int type) {
 	else{
 		//if the page does not resident in memory
 		page_faults ++;
-
+		
 		if (disk_reads >= nframes) { // there are no free frames, apply fifo replacement algorithm
 			algorithm_type = type;
 			frame = evict_frame_algo(pt, nframes);
@@ -274,7 +279,7 @@ int main(int argc, char *argv[]) {
 
 	// TODO - Any init needed
 	page_faults = disk_reads = disk_writes = 0;
-	cache = new LRUCache(nframes);
+	cache = new CustomCache(nframes);
 
 	// Create a virtual disk
 	disk = disk_open("myvirtualdisk", npages);
@@ -304,20 +309,3 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
-
-// int main2(int argc, char *argv[]) {
-// 	LRUCache* obj = new LRUCache(2);
-// 	obj->put(1,10);
-// 	obj->put(2,20);
-// 	assert(obj->get(1)==10);
-// 	assert(obj->put(3,30)==false);
-// 	assert(obj->evict().first==2);
-// 	assert(obj->put(3,30)==true);
-
-// 	assert(obj->get(2)==-1);
-// 	obj->put(4,40);
-// 	// assert(obj->get(1)==-1);
-// 	// assert(obj->get(3)==30);
-// 	// assert(obj->get(4)==40);
-// 	// obj->put(5,50);
-// }
