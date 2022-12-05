@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "vector": "cpp",
+        "unordered_map": "cpp",
+        "hash_map": "cpp",
+        "hash_set": "cpp",
+        "*.tcc": "cpp",
+        "string": "cpp",
+        "unordered_set": "cpp",
+        "string_view": "cpp",
+        "iostream": "cpp",
+        "ostream": "cpp"
+    }
+}

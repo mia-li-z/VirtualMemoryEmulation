@@ -5,7 +5,7 @@ You may add or rearrange any code or data as you need.
 The header files page_table.h and disk.h explain
 how to use the page table and disk interfaces.
 */
-
+#include "lru_cache.h"
 #include "page_table.h"
 #include "disk.h"
 #include "program.h"
@@ -14,6 +14,7 @@ how to use the page table and disk interfaces.
 #include <iostream>
 #include <string.h>
 #include <queue>
+#include <assert.h>
 
 using namespace std;
 
@@ -28,17 +29,19 @@ int disk_reads = 0;
 int disk_writes = 0;
 int algorithm_type;
 
+//queue for fifo algorithm
 std::queue<int> frame_queue;
 
 // Pointer to disk for access from handlers
 struct disk *disk = nullptr;
 
-//queue for fifo algorithm
-std:: queue<int> fifo_queue;
+// LRUCahe
+LRUCache *cache = nullptr;
 
 
 static void page_fault_handler(struct page_table *pt, int nframes, int type);
 static int evict_frame_algo(struct page_table *pt, int nframes);
+static pair<int, int> evict_lru(struct page_table *pt, int nframes);
 
 
 // Simple handler for pages == frames
@@ -81,9 +84,54 @@ Handle page fault using lru replacement algorithm
 @param page
 */
 void page_fault_handler_lru(struct page_table *pt, int page) {
-	page_fault_handler(pt,page,3);
-}
+	// page_fault_handler(pt,page,3);
+	int frame, bits;
+  	page_table_get_entry(pt, page, &frame, &bits); 
 
+	if((bits == PROT_READ)){
+		//if the page residents in memory
+		page_table_set_entry(pt, page, frame, bits | PROT_WRITE);
+		cache->get(page);
+	}
+	else{
+		//if the page does not resident in memory
+		page_faults ++;
+
+		if (disk_reads >= nframes) { // there are no free frames, apply lru replacement algorithm
+			pair<int, int> victim = evict_lru(pt, nframes);
+			frame = victim.second;
+  		}
+		else{ //there are free frames,;
+			frame = disk_reads;
+		}
+		//read data into memory and update page table
+  		page_table_set_entry(pt, page, frame, PROT_READ);
+		disk_read(disk, page, &page_table_get_physmem(pt)[frame * PAGE_SIZE]);
+  		disk_reads++;
+		cache->put(page, frame);
+	}
+}
+static pair<int, int> evict_lru(struct page_table *pt, int nframes){
+	pair<int, int> victim = cache->evict();
+	int evict_page = victim.first;
+	int evict_frame = victim.second;
+	int tmp_frame, tmp_bits, evict_bits;
+	page_table_get_entry(pt, evict_page, &tmp_frame, &tmp_bits);
+	assert(tmp_frame==evict_frame);
+	evict_bits = tmp_bits;
+
+	//if the page is dirty, write it to disk
+	if(evict_bits & PROT_WRITE){
+		disk_write(disk, evict_page, &page_table_get_physmem(pt)[evict_frame*PAGE_SIZE]);
+		disk_writes++;
+	}
+
+	//update the page table
+	page_table_set_entry(pt, evict_page, evict_frame, 0); //-1
+
+	//return <page, frame> pair
+	return victim;
+}
 
 static void page_fault_handler(struct page_table *pt, int page, int type) {
 	int frame, bits;
@@ -114,8 +162,7 @@ static void page_fault_handler(struct page_table *pt, int page, int type) {
   		page_table_set_entry(pt, page, frame, PROT_READ);
 		disk_read(disk, page, &page_table_get_physmem(pt)[frame * PAGE_SIZE]);
   		disk_reads++;
-		frame_queue.push(frame);
-
+		frame_queue.push(frame); // if condition required
 	}
 	
 	// // Print the page table contents
@@ -185,7 +232,7 @@ int main(int argc, char *argv[]) {
 	const char *algorithm = argv[3];
 	const char *program_name = argv[4];
 
-	//// Validate the algorithm specified
+	// Validate the algorithm specified
 	page_fault_handler_t page_fault_handler = NULL;
 
 	if ((strcmp(algorithm, "rand") != 0) &&
@@ -227,7 +274,8 @@ int main(int argc, char *argv[]) {
 
 	// TODO - Any init needed
 	page_faults = disk_reads = disk_writes = 0;
-	
+	cache = new LRUCache(nframes);
+
 	// Create a virtual disk
 	disk = disk_open("myvirtualdisk", npages);
 	if (!disk) {
@@ -256,3 +304,20 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
+
+// int main2(int argc, char *argv[]) {
+// 	LRUCache* obj = new LRUCache(2);
+// 	obj->put(1,10);
+// 	obj->put(2,20);
+// 	assert(obj->get(1)==10);
+// 	assert(obj->put(3,30)==false);
+// 	assert(obj->evict().first==2);
+// 	assert(obj->put(3,30)==true);
+
+// 	assert(obj->get(2)==-1);
+// 	obj->put(4,40);
+// 	// assert(obj->get(1)==-1);
+// 	// assert(obj->get(3)==30);
+// 	// assert(obj->get(4)==40);
+// 	// obj->put(5,50);
+// }
