@@ -1,89 +1,107 @@
-# import pandas as pd
-# from matplotlib import pyplot as plt
+import pandas as pd
+from matplotlib import pyplot as plt
+from matplotlib.pyplot import figure
 
-# # Set the figure size
-# plt.rcParams["figure.figsize"] = [7.00, 3.50]
-# plt.rcParams["figure.autolayout"] = True
+# Set the figure size
+def plotPics(fileName):
 
-# # Make a list of columns
-# columns = ['Page Faults', 'Disk Reads', 'Disk Writes']
+    plt.rcParams["figure.figsize"] = [7.00, 3.50]
+    plt.rcParams["figure.autolayout"] = True
 
-# # Read a CSV file
-# df = pd.read_csv("csv-files/rand-scan.csv", usecols=columns)
+    # Make a list of columns
+    columns = ['Disk Reads', 'Disk Writes']
 
-# # Plot the lines
-# df.plot()
+    # Read a CSV file
+    df = pd.read_csv("csv-files/"+fileName+".csv", usecols=columns)
 
-# plt.show()
+    # # Plot the lines and save the picture
+    ax = df.plot.line()
+    ax.figure.savefig(fileName+'.png')
+
+plotPics("fifo-sort")
+plotPics("fifo-scan")
+plotPics("fifo-focus")
+plotPics("rand-sort")
+plotPics("rand-scan")
+plotPics("rand-focus")
+plotPics("lru-sort")
+plotPics("lru-scan")
+plotPics("lru-focus")
 
 
+# generate graph for algorithm comparison
 
-# # You do not need that many import statements, so we just import
-# # numpy and matplotlib using the common alias 'np' and 'plt'.
-# import numpy as np
-# import matplotlib.pyplot as plt
-# matplotlib.style.use('ggplot')
+algo = ["fifo", "rand", "lru"]
+program = ["scan", "sort", "focus"]
 
-# # Using numpy we can use the function loadtxt to load your CSV file.
-# # We ignore the first line with the column names and use ',' as a delimiter.
-# data = np.loadtxt('csv-files/rand-scan.csv', delimiter=',', skiprows=1)
 
-# # You can access the columns directly, but let us just define them for clarity.
-# # This uses array slicing/indexing to cut the correct columns into variables.
-# time = data[:,0]
-# ground_speed = data[:,1]
-# voltage = data[:,2]
-# airspeed = data[:,3]
+pf = []
+dw = []
+x = [i for i in range(2, 101)]
 
-# # With matplotlib we define a new subplot with a certain size (10x10)
-# fig, ax = plt.subplots(figsize=(10,10))
+for i, s in enumerate(algo):
+    pf.append([])
+    dw.append([])
+    for j, a in enumerate(program):
+        pf[i].append([])
+        dw[i].append([])
+        with open("csv-files/{}-{}.csv".format(s, a), "r") as fd:
+            count = 0
+            for line in fd:
+                line = line.strip("\n").strip("\r").split(",")
+                count += 1
+                if len(line) == 0 or count == 1:
+                    continue
+                _frame = int(line[1])
+                if _frame == 1:
+                    continue
+                _page_fault = int(line[2])
+                _disk_writes = int(line[4])
+                
+                pf[i][j].append(_page_fault)
+                dw[i][j].append(_disk_writes)
 
-# ax.plot(time, ground_speed, label='Ground speed [m/s]')
-# ax.plot(time, voltage, label='Voltage [V]')
 
-# # Show the legend
-# plt.legend()
+fig = figure(num=None, figsize=(30,16), dpi=80, facecolor='w', edgecolor='k')
+fig.suptitle('Using pagefaults and diskwrites to compare paging strategy for different access patterns', fontsize=18)
 
-import matplotlib.pyplot as plt
-import csv
-  
-x = []
-y = []
-  
-with open('csv-files/rand-scan.csv','r') as csvfile:
-    lines = csv.reader(csvfile, delimiter=',')
-    for row in lines:
-        print(row)
-        while(row[0]!='Pages'):
-            x.append(int(row[1]))
-            y.append(int(row[2]))
-  
-plt.plot(x, y, color = 'g', linestyle = 'dashed',
-         marker = 'o',label = "Weather Data")
-  
-plt.xticks(rotation = 25)
-plt.xlabel('Dates')
-plt.ylabel('Temperature(°C)')
-plt.title('Weather Report', fontsize = 20)
-plt.grid()
-plt.legend()
-plt.show()
+ax1 = fig.add_subplot(231)
+ax1.title.set_text('Frames vs Page Fault - Scan')
 
-# import pandas as pd
-# import matplotlib.pyplot as mp
- 
-# # take data
-# data = pd.read_csv("csv-files/rand-scan.csv")
- 
-# # form dataframe
-# data = data.head()
-# print(data)
- 
-# df = pd.DataFrame(data, columns=["Frames", "Page Faults", "Disk Reads", "Disk Writes"])
- 
-# # plot the dataframe
-# df.plot(x="Frames", y=["Page Faults", "Disk Reads", "Disk Writes"], kind="line", figsize=(10, 10))
- 
-# # print bar graph
-# mp.show()
-plt.savefig('foo.png')
+ax2 = fig.add_subplot(232)
+ax2.title.set_text('Frames vs Page Fault - Sort')
+
+ax3 = fig.add_subplot(233)
+ax3.title.set_text('Frames vs Page Fault - Focus')
+
+ax4 = fig.add_subplot(234)
+ax4.title.set_text('Frames vs Disk Writes - Scan')
+
+ax5 = fig.add_subplot(235)
+ax5.title.set_text('Frames vs Disk Writes - Sort')
+
+ax6 = fig.add_subplot(236)
+ax6.title.set_text('Frames vs Disk Writes - Focus')
+
+count = 1
+for j in range(0, 3):
+    plt.subplot(2, 3, count)
+    count += 1
+    plt.xlabel('Frames')
+    plt.ylabel('Page faults')
+    plt.plot(x, pf[0][j], 'ro-', label = "fifo", alpha=.5, linewidth=4.5)
+    plt.plot(x, pf[1][j], 'go-', label = "rand")
+    plt.plot(x, pf[2][j], 'bo-', label = "lru", alpha=.5)
+    plt.legend(loc="upper left")
+    
+for j in range(0, 3):
+    plt.subplot(2, 3, count)
+    count += 1
+    plt.xlabel('Frames')
+    plt.ylabel('Disk Writes')
+    plt.plot(x, dw[0][j], 'bo-', label = "fifi", alpha=.5, linewidth=4.5)
+    plt.plot(x, dw[1][j], 'go-', label = "rand")
+    plt.plot(x, dw[2][j], 'ro-', label = "lru", alpha=.5)
+    plt.legend(loc="upper left")
+
+fig.savefig('Compare_algorithms.png')
