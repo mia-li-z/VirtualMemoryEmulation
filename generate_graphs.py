@@ -16,6 +16,9 @@ def plotPics(fileName):
 
     # # Plot the lines and save the picture
     ax = df.plot.line()
+    ax.set(xlabel='Frames')
+    plt.title(fileName+' graph')
+
     ax.figure.savefig(fileName+'.png')
 
 plotPics("fifo-sort")
@@ -24,14 +27,14 @@ plotPics("fifo-focus")
 plotPics("rand-sort")
 plotPics("rand-scan")
 plotPics("rand-focus")
-plotPics("lru-sort")
-plotPics("lru-scan")
-plotPics("lru-focus")
+plotPics("custom-sort")
+plotPics("custom-scan")
+plotPics("custom-focus")
 
 
 # generate graph for algorithm comparison
 
-algo = ["fifo", "rand", "lru"]
+algo = ["fifo", "rand", "custom"]
 program = ["scan", "sort", "focus"]
 
 
@@ -63,22 +66,22 @@ for i, s in enumerate(algo):
 
 
 fig = figure(num=None, figsize=(30,16), dpi=80, facecolor='w', edgecolor='k')
-fig.suptitle('Using pagefaults and diskwrites to compare paging strategy for different access patterns', fontsize=18)
+fig.suptitle('Using diskreads and diskwrites to compare paging replacement algorithm for different programs', fontsize=18)
 
 ax1 = fig.add_subplot(231)
-ax1.title.set_text('Frames vs Page Fault - Scan')
+ax1.title.set_text('Frames vs Disk Reads - Sort')
 
 ax2 = fig.add_subplot(232)
-ax2.title.set_text('Frames vs Page Fault - Sort')
+ax2.title.set_text('Frames vs Disk Reads - Scan')
 
 ax3 = fig.add_subplot(233)
-ax3.title.set_text('Frames vs Page Fault - Focus')
+ax3.title.set_text('Frames vs Disk Reads - Focus')
 
 ax4 = fig.add_subplot(234)
-ax4.title.set_text('Frames vs Disk Writes - Scan')
+ax4.title.set_text('Frames vs Disk Writes - Sort')
 
 ax5 = fig.add_subplot(235)
-ax5.title.set_text('Frames vs Disk Writes - Sort')
+ax5.title.set_text('Frames vs Disk Writes - Scan')
 
 ax6 = fig.add_subplot(236)
 ax6.title.set_text('Frames vs Disk Writes - Focus')
@@ -91,7 +94,7 @@ for j in range(0, 3):
     plt.ylabel('Page faults')
     plt.plot(x, pf[0][j], 'ro-', label = "fifo", alpha=.5, linewidth=4.5)
     plt.plot(x, pf[1][j], 'go-', label = "rand")
-    plt.plot(x, pf[2][j], 'bo-', label = "lru", alpha=.5)
+    plt.plot(x, pf[2][j], 'bo-', label = "custom", alpha=.5)
     plt.legend(loc="upper left")
     
 for j in range(0, 3):
@@ -99,9 +102,9 @@ for j in range(0, 3):
     count += 1
     plt.xlabel('Frames')
     plt.ylabel('Disk Writes')
-    plt.plot(x, dw[0][j], 'bo-', label = "fifi", alpha=.5, linewidth=4.5)
+    plt.plot(x, dw[0][j], 'ro-', label = "fifi", alpha=.5, linewidth=4.5)
     plt.plot(x, dw[1][j], 'go-', label = "rand")
-    plt.plot(x, dw[2][j], 'ro-', label = "lru", alpha=.5)
+    plt.plot(x, dw[2][j], 'bo-', label = "custom", alpha=.5)
     plt.legend(loc="upper left")
 
 fig.savefig('Compare_algorithms.png')

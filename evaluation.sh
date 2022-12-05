@@ -1,6 +1,6 @@
 #!/bin/bash
 EXEC=./virtmem
-ALGORITHM="rand fifo lru"
+ALGORITHM="rand fifo custom"
 BENCHMARK="scan sort focus"
 
 if [ ! -e $EXEC ]; then
