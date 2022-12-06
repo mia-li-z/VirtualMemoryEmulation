@@ -6,8 +6,6 @@ Make all of your changes to main.cpp instead.
 #include "program.h"
 
 #include <iostream>
-#include <cassert>
-
 
 using std::cout;
 using std::endl;
@@ -34,14 +32,10 @@ void focus_program( char *data, int length )
 	char *data_verify = new char[length];
 	int total_verify = 0;
 
-	//count for times of memory references
-	int mem_ref = 0;
-
 	srand(38290);
 
 	for(i=0;i<length;i++) {
 		data[i] = 0;
-		mem_ref++;
 		data_verify[i] = 0;
 	}
 
@@ -52,22 +46,19 @@ void focus_program( char *data, int length )
 			int index = (start + rand() % size) % length;
 			char value = rand();
 			data[index] = value;
-			mem_ref++;
 			data_verify[index] = value;
 		}
 	}
 
 	for(i=0;i<length;i++) {
 		total += data[i];
-		mem_ref++;
 		total_verify += data_verify[i];
 	}
 
 	delete[] data_verify;
-	assert(mem_ref==length*2+10000);
+
 	if (total == total_verify) {
 		cout << "Focus Successful: Result = " << total << endl;
-		//cout << "Times of memory reference = " << mem_ref << endl;
 	}
 	else {
 		cout << "Focus Failed: Result = " << total << ", Expected = " << total_verify << endl;
@@ -132,4 +123,3 @@ void scan_program( char *cdata, int length )
 		cout << "Scan Failed: Result = " << total << ", Expected = " << total_verify << endl;
 	}
 }
-
