@@ -35,7 +35,7 @@ plotPics("custom-focus")
 # generate graph for algorithm comparison
 
 algo = ["fifo", "rand", "custom"]
-program = ["scan", "sort", "focus"]
+program = ["sort", "scan", "focus"]
 
 
 pf = []
@@ -66,16 +66,16 @@ for i, s in enumerate(algo):
 
 
 fig = figure(num=None, figsize=(30,16), dpi=80, facecolor='w', edgecolor='k')
-fig.suptitle('Using diskreads and diskwrites to compare paging replacement algorithm for different programs', fontsize=18)
+fig.suptitle('Using page faults and disk writes to compare paging replacement algorithm for different programs', fontsize=18)
 
 ax1 = fig.add_subplot(231)
-ax1.title.set_text('Frames vs Disk Reads - Sort')
+ax1.title.set_text('Frames vs Page Faults - Sort')
 
 ax2 = fig.add_subplot(232)
-ax2.title.set_text('Frames vs Disk Reads - Scan')
+ax2.title.set_text('Frames vs Page Faults - Scan')
 
 ax3 = fig.add_subplot(233)
-ax3.title.set_text('Frames vs Disk Reads - Focus')
+ax3.title.set_text('Frames vs Page Faults - Focus')
 
 ax4 = fig.add_subplot(234)
 ax4.title.set_text('Frames vs Disk Writes - Sort')
