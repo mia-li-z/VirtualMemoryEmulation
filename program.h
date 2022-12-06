@@ -9,6 +9,5 @@ Make all of your changes to main.cpp instead.
 void scan_program( char *data, int length );
 void sort_program( char *data, int length );
 void focus_program( char *data, int length );
-void reference_string( char *data, int length);
 
 #endif

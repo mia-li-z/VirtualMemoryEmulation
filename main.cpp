@@ -35,13 +35,13 @@ std::queue<int> frame_queue;
 // Pointer to disk for access from handlers
 struct disk *disk = nullptr;
 
-// LRUCahe
+// customCahe
 CustomCache *cache = nullptr;
 
 
 static void page_fault_handler(struct page_table *pt, int nframes, int type);
 static int evict_frame_algo(struct page_table *pt, int nframes);
-static pair<int, int> evict_lru(struct page_table *pt, int nframes);
+static pair<int, int> evict_custom(struct page_table *pt, int nframes);
 
 
 // Simple handler for pages == frames
@@ -79,11 +79,11 @@ void page_fault_handler_fifo(struct page_table *pt, int page) {
 }
 
 /*
-Handle page fault using lru replacement algorithm
+Handle page fault using custom replacement algorithm
 @param pt
 @param page
 */
-void page_fault_handler_lru(struct page_table *pt, int page) {
+void page_fault_handler_custom(struct page_table *pt, int page) {
 	// page_fault_handler(pt,page,3);
 
 	int frame, bits, evict_frame;
@@ -98,9 +98,9 @@ void page_fault_handler_lru(struct page_table *pt, int page) {
 		//if the page does not resident in memory
 		page_faults++;
 
-		if (disk_reads >= nframes) { // there are no free frames, apply lru replacement algorithm
+		if (disk_reads >= nframes) { // there are no free frames, apply custom replacement algorithm
 			assert(cache->put(page, disk_reads)==false);
-			pair<int, int> victim = evict_lru(pt, nframes);
+			pair<int, int> victim = evict_custom(pt, nframes);
 			evict_frame = victim.second;
   		}
 		else{ //there are free frames,;
@@ -115,7 +115,7 @@ void page_fault_handler_lru(struct page_table *pt, int page) {
 	}
 }
 
-static pair<int, int> evict_lru(struct page_table *pt, int nframes){
+static pair<int, int> evict_custom(struct page_table *pt, int nframes){
 	// get victim pair <page, value>
 	pair<int, int> victim = cache->evict(); 
 	int evict_page = victim.first;
@@ -182,7 +182,7 @@ static int evict_frame_algo(struct page_table *pt, int nframes){
 	//get the frame to be evicted based on types
 	//type 1 represents rand
 	//type 2 represents fifo
-	//type 3 represents lru
+	//type 3 represents custom
 	int evict_frame;
 	if(algorithm_type == 1){
 		evict_frame = rand()% nframes;
@@ -227,7 +227,7 @@ static int evict_frame_algo(struct page_table *pt, int nframes){
 int main(int argc, char *argv[]) {
 	// Check argument count
 	if (argc != 5) {
-		cerr << "Usage: virtmem <npages> <nframes> <rand|fifo|lru> <sort|scan|focus>" << endl;
+		cerr << "Usage: virtmem <npages> <nframes> <rand|fifo|custom> <sort|scan|focus>" << endl;
 		exit(1);
 	}
 
@@ -242,7 +242,7 @@ int main(int argc, char *argv[]) {
 
 	if ((strcmp(algorithm, "rand") != 0) &&
 	    (strcmp(algorithm, "fifo") != 0) &&
-	    (strcmp(algorithm, "lru") != 0)) {
+	    (strcmp(algorithm, "custom") != 0)) {
 		cerr << "ERROR: Unknown algorithm: " << algorithm << endl;
 		exit(1);
 	}
@@ -252,8 +252,8 @@ int main(int argc, char *argv[]) {
 	else if(!strcmp(algorithm, "fifo")){
 		page_fault_handler = page_fault_handler_fifo;
 	}
-	else if(!strcmp(algorithm, "lru")){
-		page_fault_handler = page_fault_handler_lru;
+	else if(!strcmp(algorithm, "custom")){
+		page_fault_handler = page_fault_handler_custom;
 	}
 
 	// Validate the program specified

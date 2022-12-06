@@ -20,8 +20,7 @@ using std::cerr;
 using std::endl;
 
 // To avoid warning
-int remap_file_pages(void *addr, size_t size, int prot,
-                            size_t pgoff, int flags);
+int remap_file_pages(void *addr, size_t size, int prot, size_t pgoff, int flags);
 
 struct page_table *the_page_table = 0;
 
